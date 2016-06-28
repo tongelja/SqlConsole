@@ -13,7 +13,8 @@ class SqlConsole:
         self.connection_info = {}
         self.conn = None
         self.curs = None
-        self.results = []
+        self.results = {}
+        self.saved_results = {}
 
     def mssqlOpen(self, server=None, user=None, password=None, port=1433):
         self.connection_info['type'] = 'MSSql'
@@ -93,30 +94,32 @@ class SqlConsole:
         return sql_stmt
 
     def __write_table__(self):
-        row_length = len(self.results[0])
+        row_length = len(self.results['data'][0])
         max_length = [1] * row_length
 
-        i = self.results_description
-        for j in range(len(self.results_description)):
-            if max_length[j] < len(str(i[0])):
-                max_length[j] = len(str(i[0]))
+        i = self.results['desc']
+        for j in range(len(i)):
+            if max_length[j] < len(str(i[j][0])):
+                max_length[j] = len(str(i[j][0]))
 
-        for i in self.results:
-            if max_length[j] < len(str(i[0])):
-                max_length[j] = len(str(i[0]))
+        for i in self.results['data']:
+            for j in range(len(i)):
+                if max_length[j] < len(str(i[0])):
+                    max_length[j] = len(str(i[0]))
 
 
+        i = self.results['desc']
         print('\n', end='')
         for j in range(len(i)):
             length = max_length[j]
-            print('{0:<{width}}'.format(str(i[0]), width=length), end='  ')
+            print('{0:<{width}}'.format(str(i[j][0]), width=length), end='  ')
 
         print('\n', end='')
         for j in range(len(i)):
             length = max_length[j]
             print('{0:<{width}}'.format('-'*length, width=length), end='  ')
             
-        for i in self.results:
+        for i in self.results['data']:
             print('\n', end='')
             for j in range(len(i)):
                 length = max_length[j]
@@ -129,8 +132,8 @@ class SqlConsole:
         output      = self.curs.execute(sql_stmt)
         description = output.description
 
-        self.results             = [ r for r in output ]
-        self.results_description = description
+        self.results['data'] = [ r for r in output ]
+        self.results['desc'] = description
 
         self.__write_table__()
 
@@ -141,19 +144,22 @@ class SqlConsole:
         output = self.curs.execute(sql_stmt)
         description = output.description
 
-        self.results             = [ r for r in output ]
-        self.results_description = description
+        self.results['data'] = [ r for r in output ]
+        self.results['desc'] = description
 
         self.__write_table__()
 
+
+    def __save_results__(self, result_name):
+        self.saved_results[result_name] = self.results
 
     def __parse_sql__(self, sql_stmt):
         if self.conn == 'None':
                 print('\nERROR: No SQL Connection')
                 sys.exit(2)
 
-        exec_query = {'MSSql'  : 'self.__parse_mssql_sql_query__(sql_stmt)',
-                      'Oracle' : 'self.__parse_oracle_sql_query__(sql_stmt)' }
+        exec_query = {'MSSql'  : 'self.__parse_mssql_sql_query__',
+                      'Oracle' : 'self.__parse_oracle_sql_query__' }
 
         if re.search('^\s*SAVE', sql_stmt.upper(), re.I):
             action = 'SAVE'
@@ -161,21 +167,27 @@ class SqlConsole:
             action = 'QUERY'
 
         if action.upper() == 'SAVE':
-            pass
+            match = re.search('save (\w+)', sql_stmt, re.I)
+            if match:
+                saved_result = match.group(1).lower()
+                self.__save_results__(saved_result) 
         else:
-            eval( exec_query[ self.connection_info['type'] ]  )
+            eval( exec_query[ self.connection_info['type'] ])(sql_stmt)  
 
-    def cmd(self):
+    def cmd(self, sql_stmt=None):
         if self.conn is None:
             print('No Connection')
             sys.exit(2)
 
-        while True:
-            sql_stmt = self.__sql_prompt__()
-            if sql_stmt.upper() == 'EXIT':
-                break
-            elif sql_stmt.upper() == '':
-                pass
-            else:
-                self.__parse_sql__(sql_stmt)
+        if sql_stmt != None:
+            self.__parse_sql__(sql_stmt)
+        else:
+            while True:
+                sql_stmt = self.__sql_prompt__()
+                if sql_stmt.upper() == 'EXIT':
+                    break
+                elif sql_stmt.upper() == '':
+                    pass
+                else:
+                    self.__parse_sql__(sql_stmt)
 
