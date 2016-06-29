@@ -1,6 +1,7 @@
 
 
-import sys, getpass, re
+import sys, getpass, re, traceback
+
 try:
     import pypyodbc, cx_Oracle
 except:
@@ -112,7 +113,7 @@ class SqlConsole:
         print('\n', end='')
         for j in range(len(i)):
             length = max_length[j]
-            print('{0:<{width}}'.format(str(i[j][0]), width=length), end='  ')
+            print('{0:<{width}}'.format(str(i[j][0]).upper(), width=length), end='  ')
 
         print('\n', end='')
         for j in range(len(i)):
@@ -189,5 +190,9 @@ class SqlConsole:
                 elif sql_stmt.upper() == '':
                     pass
                 else:
-                    self.__parse_sql__(sql_stmt)
+                    try:
+                        self.__parse_sql__(sql_stmt)
+                    except Exception as err:
+                        print('\nERROR parsing SQL\n')
+                        print(str(err))
 
