@@ -14,8 +14,9 @@ class SqlConsole:
         self.connection_info = {}
         self.conn = None
         self.curs = None
-        self.results = {}
+        self.results01 = {}
         self.saved_results = {}
+        self.results = []
 
     def mssqlOpen(self, server=None, user=None, password=None, port=1433):
         self.connection_info['type'] = 'MSSql'
@@ -78,9 +79,15 @@ class SqlConsole:
         print('-'* (len(prompt) + 5))
 
         text = input('\nSQL> ').upper()
+        match =  re.search('^(\w+)[\b\s\n]?', text, re.I)
+        keyword_input = match.group(1)
+        keyword_values = [ 'SAVE' ]
 
         while True:
             if text.strip() == '/':
+                break
+            elif keyword_input in keyword_values:
+                sql_stmt = text
                 break
             elif re.search('.*;$', text):
                 sql_stmt += ' ' + str(text)
@@ -95,21 +102,21 @@ class SqlConsole:
         return sql_stmt
 
     def __write_table__(self):
-        row_length = len(self.results['data'][0])
+        row_length = len(self.results01['data'][0])
         max_length = [1] * row_length
 
-        i = self.results['desc']
+        i = self.results01['desc']
         for j in range(len(i)):
             if max_length[j] < len(str(i[j][0])):
                 max_length[j] = len(str(i[j][0]))
 
-        for i in self.results['data']:
+        for i in self.results01['data']:
             for j in range(len(i)):
                 if max_length[j] < len(str(i[0])):
                     max_length[j] = len(str(i[0]))
 
 
-        i = self.results['desc']
+        i = self.results01['desc']
         print('\n', end='')
         for j in range(len(i)):
             length = max_length[j]
@@ -120,7 +127,7 @@ class SqlConsole:
             length = max_length[j]
             print('{0:<{width}}'.format('-'*length, width=length), end='  ')
             
-        for i in self.results['data']:
+        for i in self.results01['data']:
             print('\n', end='')
             for j in range(len(i)):
                 length = max_length[j]
@@ -133,8 +140,9 @@ class SqlConsole:
         output      = self.curs.execute(sql_stmt)
         description = output.description
 
-        self.results['data'] = [ r for r in output ]
-        self.results['desc'] = description
+        self.results01['data'] = [ r for r in output ]
+        self.results01['desc'] = description
+        self.results = self.results01['data']
 
         self.__write_table__()
 
@@ -145,14 +153,15 @@ class SqlConsole:
         output = self.curs.execute(sql_stmt)
         description = output.description
 
-        self.results['data'] = [ r for r in output ]
-        self.results['desc'] = description
+        self.results01['data'] = [ r for r in output ]
+        self.results01['desc'] = description
+        self.results = [ r for r in self.results01['data'] ]
 
         self.__write_table__()
 
 
     def __save_results__(self, result_name):
-        self.saved_results[result_name] = self.results
+        self.saved_results[result_name] = self.results01
 
     def __parse_sql__(self, sql_stmt):
         if self.conn == 'None':
