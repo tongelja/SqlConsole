@@ -18,6 +18,8 @@ class SqlConsole:
         self.saved_results = {}
         self.results = []
 
+        self.connected_user = ''
+
     def mssqlOpen(self, server=None, user=None, password=None, port=1433):
         self.connection_info['type'] = 'MSSql'
         if server is None:
@@ -67,6 +69,8 @@ class SqlConsole:
         curs = conn.cursor()
         results = curs.execute('select name from v$database').fetchone()
         self.connection_info['database'] = results[0]
+ 
+        self.connected_user = user.upper()
 
 
     def __sql_prompt__(self):
@@ -81,7 +85,7 @@ class SqlConsole:
         text = input('\nSQL> ').upper()
         match =  re.search('^(\w+)[\b\s\n]?', text, re.I)
         keyword_input = match.group(1)
-        keyword_values = [ 'SAVE' ]
+        keyword_values = [ 'SAVE' , 'DESC', 'DESCRIBE' ]
 
         while True:
             if text.strip() == '/':
@@ -173,14 +177,25 @@ class SqlConsole:
 
         if re.search('^\s*SAVE', sql_stmt.upper(), re.I):
             action = 'SAVE'
+        elif re.search('^\s*DESC[CRIBE]?', sql_stmt.upper(), re.I):
+            action = 'DESCRIBE'
         else:
             action = 'QUERY'
 
-        if action.upper() == 'SAVE':
+        if action == 'SAVE':
             match = re.search('save (\w+)', sql_stmt, re.I)
             if match:
                 saved_result = match.group(1).lower()
                 self.__save_results__(saved_result) 
+        elif action == 'DESCRIBE':
+            match = re.search('desc[cribe]? (\w+)', sql_stmt, re.I)
+            if match:
+                object = match.group(1).lower()
+            
+                object.split            
+                sql_stmt = "select rpad(column_name, 40, ' ' ) ||  data_type || '(' ||  data_length || ')'  from dba_tab_columns where owner = 'OPS$ORACLE' and table_name = 'NAV_DB_DIR_INVENTORY'"
+            
+             
         else:
             eval( exec_query[ self.connection_info['type'] ])(sql_stmt)  
 
