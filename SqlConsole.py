@@ -9,7 +9,7 @@ except:
     sys.exit(2)
 
 
-class SqlConsole:
+class db:
     def __init__(self):
         self.connection_info = {}
         self.conn = None
@@ -83,7 +83,7 @@ class SqlConsole:
         print('-'* (len(prompt) + 5))
 
         text = input('\nSQL> ').upper()
-        match =  re.search('^(\w+)[\b\s\n]?', text, re.I)
+        match =  re.search('^\s*(\w+)(\s|$)+', text, re.I)
         keyword_input = match.group(1)
         keyword_values = [ 'SAVE' , 'DESC', 'DESCRIBE' ]
 
@@ -116,26 +116,27 @@ class SqlConsole:
 
         for i in self.results01['data']:
             for j in range(len(i)):
-                if max_length[j] < len(str(i[0])):
-                    max_length[j] = len(str(i[0]))
+                if max_length[j] < len(str(i[j])):
+                    max_length[j] = len(str(i[j]))
 
 
         i = self.results01['desc']
         print('\n', end='')
         for j in range(len(i)):
             length = max_length[j]
-            print('{0:<{width}}'.format(str(i[j][0]).upper(), width=length), end='  ')
+            print('{:<{width}}'.format(str(i[j][0]).upper(), width=length), end='  ')
 
         print('\n', end='')
         for j in range(len(i)):
             length = max_length[j]
-            print('{0:<{width}}'.format('-'*length, width=length), end='  ')
+            print('{:<{width}}'.format('-'*length, width=length), end='  ')
             
         for i in self.results01['data']:
             print('\n', end='')
             for j in range(len(i)):
                 length = max_length[j]
-                print('{0:<{width}}'.format(str(i[j]), width=length), end='  ')
+                print('{:<{width}}'.format(str(i[j]), width=length), end='  ')
+
 
 
     def __parse_mssql_sql_query__(self, sql_stmt):
@@ -165,12 +166,15 @@ class SqlConsole:
 
 
     def __save_results__(self, result_name):
-        self.saved_results[result_name] = self.results01
+        self.saved_results[result_name] = self.results01['data']
 
     def __parse_sql__(self, sql_stmt):
         if self.conn == 'None':
                 print('\nERROR: No SQL Connection')
                 sys.exit(2)
+
+        desc_query = {'MSSql'  : 'self.__parse_mssql_desc_query__',
+                      'Oracle' : 'self.__parse_oracle_desc_query__' }
 
         exec_query = {'MSSql'  : 'self.__parse_mssql_sql_query__',
                       'Oracle' : 'self.__parse_oracle_sql_query__' }
@@ -187,17 +191,33 @@ class SqlConsole:
             if match:
                 saved_result = match.group(1).lower()
                 self.__save_results__(saved_result) 
+
         elif action == 'DESCRIBE':
-            match = re.search('desc[cribe]? (\w+)', sql_stmt, re.I)
+            match = re.search('desc(ribe)? (.*)', sql_stmt, re.I)
             if match:
-                object = match.group(1).lower()
+                fullpath_object = match.group(2).lower()
             
-                object.split            
-                sql_stmt = "select rpad(column_name, 40, ' ' ) ||  data_type || '(' ||  data_length || ')'  from dba_tab_columns where owner = 'OPS$ORACLE' and table_name = 'NAV_DB_DIR_INVENTORY'"
-            
-             
+                if len(fullpath_object.split('.')) == 2:
+                    db_owner  = fullpath_object.split('.')[0].upper()
+                    db_object = fullpath_object.split('.')[1].upper()
+                elif len(object.split('.')) == 1:
+                    db_object = fullpath_object
+                else:
+                    db_owner=''
+                    db_object = ''
+            eval( desc_query[ self.connection_info['type'] ])(db_owner, db_object)  
+
         else:
             eval( exec_query[ self.connection_info['type'] ])(sql_stmt)  
+
+    def __parse_mssql_desc_query__(self, db_owner, db_object):
+        sql_smt = ''
+        self.__parse_mssql_sql_query__(sql_stmt)
+
+    def __parse_oracle_desc_query__(self, db_owner, db_object):
+        sql_stmt = "select rpad(column_name, 40, ' ' ) ||  data_type || '(' ||  data_length || ')'  as " + db_object + " from dba_tab_columns where owner = '" + db_owner + "' and table_name = '" + db_object + "'"
+        self.__parse_oracle_sql_query__(sql_stmt)
+ 
 
     def cmd(self, sql_stmt=None):
         if self.conn is None:
