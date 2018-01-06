@@ -1,4 +1,4 @@
-
+#!/bin/python3
 
 import sys, getpass, re, traceback, os
 
@@ -20,7 +20,7 @@ class db:
 
         self.connected_user = ''
 
-        self.keyword_values = [ 'EXIT', 'SAVE' , 'DESC', 'DESCRIBE' ]
+        self.keyword_values = [ 'EXIT', 'SAVE' , 'DESC', 'DESCRIBE', '@', 'RUN' ]
 
 
     def mssqlOpen(self, server=None, user=None, password=None, port=1433):
@@ -95,9 +95,21 @@ class db:
             ##
 
             match =  re.search('^\s*(\w+)(\s|$)+', text, re.I)
-            keyword_input = match.group(1).upper()
-  
-            if keyword_input in self.keyword_values:
+            if match:
+                keyword_input = match.group(1).upper()
+            else:
+                keyword_input = ''
+
+            match =  re.search('^\s*(.)', text, re.I)
+            if match:
+                keyword_first_char_input = match.group(1).upper()
+            else:
+                keyword_first_char_input = ''
+ 
+            if keyword_input in self.keyword_values or keyword_first_char_input in self.keyword_values:
+                sql_stmt = text
+                break
+            elif text.strip() == '':
                 sql_stmt = text
                 break
             elif text.strip() == '/' or text.strip == ';':
@@ -113,6 +125,10 @@ class db:
         return sql_stmt
 
     def __write_table__(self):
+        if len(self.results01['data']) == 0:
+            print('No data found')
+            return
+
         row_length = len(self.results01['data'][0])
         max_length = [1] * row_length
 
@@ -202,30 +218,47 @@ class db:
                 print('\nERROR: No SQL Connection')
                 sys.exit(2)
 
-        save_query = {'MSSql'  : 'self.__parse_mssql_save_query__',
-                      'Oracle' : 'self.__parse_oracle_save_query__' }
+        desc_query   = {'MSSql'  : 'self.__parse_mssql_desc___', 'Oracle' : 'self.__parse_oracle_desc__' }
 
-        desc_query = {'MSSql'  : 'self.__parse_mssql_desc_query__',
-                      'Oracle' : 'self.__parse_oracle_desc_query__' }
+        exec_query   = {'MSSql'  : 'self.__parse_mssql_sql_query__',  'Oracle' : 'self.__parse_oracle_sql_query__' }
 
-        exec_query = {'MSSql'  : 'self.__parse_mssql_sql_query__',
-                      'Oracle' : 'self.__parse_oracle_sql_query__' }
+        script_query = {'MSSql'  : 'self.__parse_mssql_script___',  'Oracle' : 'self.__parse_oracle_script__' }
 
 
-        match =  re.search('^\s*(\w+)(\s|$)+', sql_stmt, re.I)
+        match =  re.search('^\s*(.+?)(\s|$)+', sql_stmt, re.I)
         keyword_input = match.group(1).upper()
-
+        match = re.search('(.)', keyword_input)
+        keyword_first_char = match.group(1)
+       
         if keyword_input == 'SAVE':
             self.__save_results__(sql_stmt) 
 
         elif keyword_input == 'DESCRIBE' or keyword_input == 'DESC':
             eval( desc_query[ self.connection_info['type'] ])(sql_stmt)  
 
+        elif keyword_input == 'RUN' or keyword_first_char == '@':
+            eval( script_query[ self.connection_info['type'] ])(sql_stmt)  
+
         else:
             eval( exec_query[ self.connection_info['type'] ])(sql_stmt)  
 
 
-    def __parse_mssql_desc_query__(self, sql_stmt):
+    def __parse_oracle_script__(self, sql_stmt):
+
+        match = re.search('(@|run\s+)?(.*)', sql_stmt, re.I)
+
+        if match:
+            script_name = match.group(2)
+            script = open(script_name).read().strip()
+        script = re.sub('\n', ' ', script)
+        sql_stmt = re.search('(select .*)(;|/)?', script, re.I).group(1)
+        sql_stmt = re.sub('(\n|;$|\/$)', ' ', sql_stmt)
+        print('File: ' + script_name)
+        print('SQL: ' + sql_stmt)
+
+        self.__parse_oracle_sql_query__(sql_stmt)
+
+    def __parse_mssql_desc__(self, sql_stmt):
 
         match = re.search('desc(ribe)? (.*)', sql_stmt, re.I)
         if match:
@@ -243,7 +276,7 @@ class db:
         sql_stmt = 'exec sp_columns ' + db_object
         self.__parse_mssql_sql_query__(sql_stmt)
 
-    def __parse_oracle_desc_query__(self, sql_stmt):
+    def __parse_oracle_desc__(self, sql_stmt):
 
 
         match = re.search('desc(ribe)? (.*)', sql_stmt, re.I)
@@ -287,7 +320,7 @@ class db:
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                         print('\nERROR parsing SQL\n')
                         print(str(err))
-                        #print(exc_type, fname, exc_tb.tb_lineno)
-                        #print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+                        print(exc_type, fname, exc_tb.tb_lineno)
+                        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
 
 
