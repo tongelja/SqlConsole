@@ -229,7 +229,7 @@ class db:
         keyword_input = match.group(1).upper()
         match = re.search('(.)', keyword_input)
         keyword_first_char = match.group(1)
-       
+      
         if keyword_input == 'SAVE':
             self.__save_results__(sql_stmt) 
 
@@ -251,8 +251,22 @@ class db:
             script_name = match.group(2)
             script = open(script_name).read().strip()
         script = re.sub('\n', ' ', script)
-        sql_stmt = re.search('(select .*)(;|/)?', script, re.I).group(1)
-        sql_stmt = re.sub('(\n|;$|\/$)', ' ', sql_stmt)
+        sql_stmt = re.search('(select .*)(;|\/)?', script, re.I).group(1)
+        sql_stmt = re.sub('(;|\/)', ' ', sql_stmt)
+
+        match = re.search('(&\w+)', sql_stmt, re.I)
+        if match:
+            input_variables=match.groups()
+        else:
+            input_variables=[]
+
+        var_translation = {}
+        for i in range(len(input_variables)):
+            var_substitute = input('Value for ' + input_variables[i] + ':  ')
+            var_translation[input_variables[i]] = var_substitute
+            sql_stmt = re.sub(input_variables[i], var_substitute, sql_stmt) 
+        
+        
         print('File: ' + script_name)
         print('SQL: ' + sql_stmt)
 
