@@ -251,8 +251,8 @@ class db:
             script_name = match.group(2)
             script = open(script_name).read().strip()
         script = re.sub('\n', ' ', script)
-        sql_stmt = re.search('(select .*)(;|\/)?', script, re.I).group(1)
-        sql_stmt = re.sub('(;|\/)', ' ', sql_stmt)
+        sql_stmt = re.search('(select .*)(\;$|\/$)', script, re.I).group(1)
+        #sql_stmt = re.sub('(;|\/)', ' ', sql_stmt)
 
         match = re.search('(&\w+)', sql_stmt, re.I)
         if match:
