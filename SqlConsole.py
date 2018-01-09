@@ -76,6 +76,21 @@ class db:
         self.connected_user = user.upper()
 
 
+    def execproc(self, procedure_name, input_variables):
+       
+        self.curs = self.conn.cursor()
+
+        try:
+            output = self.curs.callproc(procedure_name, input_variables)
+
+        except Exception as err:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print('\nERROR parsing SQL Procedure\n')
+            print(str(err))
+
+
+
     def __sql_prompt__(self):
         sql_stmt = ''
         text = ''
@@ -159,7 +174,9 @@ class db:
             for j in range(len(i)):
                 length = max_length[j]
                 print('{:<{width}}'.format(str(i[j]), width=length), end='  ')
+        print('\n', end='')
 
+       
 
 
     def __parse_mssql_sql_query__(self, sql_stmt):
@@ -185,23 +202,31 @@ class db:
         self.curs = self.conn.cursor()
         self.results01 = {}
 
-        output = self.curs.execute(sql_stmt)
+        try:
+            output = self.curs.execute(sql_stmt)
 
-        if hasattr(output, 'description'):
-            description = output.description
-        else:
-            description = 'None'
+            if hasattr(output, 'description'):
+                description = output.description
+            else:
+                description = 'None'
 
-        if output is None:
-            self.results01['data'] = [['Complete']]
-            self.results01['desc'] = [['Call Results']]
-        else:
-            self.results01['data'] = [ r for r in output ]
-            self.results01['desc'] = description
-            self.results = [ r for r in self.results01['data'] ]
+            if output is None:
+                self.results01['data'] = [['Complete']]
+                self.results01['desc'] = [['Call Results']]
+            else:
+                self.results01['data'] = [ r for r in output ]
+                self.results01['desc'] = description
+                self.results = [ r for r in self.results01['data'] ]
 
-        self.__write_table__()
+            self.__write_table__()
 
+        except Exception as err:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print('\nERROR parsing SQL: ' + sql_stmt +'\n')
+
+
+        
 
     def __save_results__(self, sql_stmt):
 
@@ -222,7 +247,7 @@ class db:
 
         exec_query   = {'MSSql'  : 'self.__parse_mssql_sql_query__',  'Oracle' : 'self.__parse_oracle_sql_query__' }
 
-        script_query = {'MSSql'  : 'self.__parse_mssql_script___',  'Oracle' : 'self.__parse_oracle_script__' }
+        script_query = {'MSSql'  : 'self.__parse_mssql_script__',  'Oracle' : 'self.__parse_oracle_script__' }
 
 
         match =  re.search('^\s*(.+?)(\s|$)+', sql_stmt, re.I)
@@ -241,6 +266,37 @@ class db:
 
         else:
             eval( exec_query[ self.connection_info['type'] ])(sql_stmt)  
+
+
+
+    def __parse_mssql_script__(self, sql_stmt):
+
+        match = re.search('(@|run\s+)?(.*)', sql_stmt, re.I)
+
+        if match:
+            script_name = match.group(2)
+            script = open(script_name).read().strip()
+        script = re.sub('\n', ' ', script)
+        sql_stmt = re.search('(select .*)(\;$|\/$)', script, re.I).group(1)
+        #sql_stmt = re.sub('(;|\/)', ' ', sql_stmt)
+
+        match = re.search('(&\w+)', sql_stmt, re.I)
+        if match:
+            input_variables=match.groups()
+        else:
+            input_variables=[]
+
+        var_translation = {}
+        for i in range(len(input_variables)):
+            var_substitute = input('Value for ' + input_variables[i] + ':  ')
+            var_translation[input_variables[i]] = var_substitute
+            sql_stmt = re.sub(input_variables[i], var_substitute, sql_stmt) 
+        
+        
+        print('File: ' + script_name)
+        print('SQL: ' + sql_stmt)
+
+        self.__parse_mssql_sql_query__(sql_stmt)
 
 
     def __parse_oracle_script__(self, sql_stmt):
@@ -334,7 +390,7 @@ class db:
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                         print('\nERROR parsing SQL\n')
                         print(str(err))
-                        print(exc_type, fname, exc_tb.tb_lineno)
-                        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+                        #print(exc_type, fname, exc_tb.tb_lineno)
+                        #print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
 
 
