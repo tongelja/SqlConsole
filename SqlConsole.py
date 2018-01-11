@@ -22,7 +22,7 @@ class SqlDb:
 
         self.keyword_values = [ 'EXIT', 'SAVE' , 'DESC', 'DESCRIBE', '@', 'RUN' ]
 
-        self.path = ['/Users/jtongeli/work/scripts/instantclient_12_1_6/']
+        self.path = ['/Users/jtongeli/work/scripts/instantclient_12_1_6/', '/usr/local/bin/']
 
         self.user = None
         self.password = None
@@ -273,6 +273,14 @@ class Mssql(SqlDb):
         sql_stmt = 'exec sp_columns ' + db_object
         self.query(sql_stmt)
 
+    def sqlcmd(self, directory=None):
+        for i in self.path:
+            filename = i + '/sqlcmd'
+            if os.path.isfile(filename):
+                cmd = filename + ' -U ' + self.user + ' -P ' + self.password  + ' -S ' + self.server 
+                print('Running ' + cmd)
+                subprocess.call(cmd, shell=True)
+
 
 
 class Oracle(SqlDb):
@@ -413,6 +421,12 @@ class Oracle(SqlDb):
         for i in self.path:
             filename = i + '/sqlplus'
             if os.path.isfile(filename):
+                if self.user.lower() == 'sys': 
+                    as_sysdba = 'as sysdba'
+                else:
+                    as_sysdba = ' '
+                cmd = filename + ' ' + self.user + '/' + self.password  + '@' + self.server + ':1521/' + self.database + as_sysdba
+
                 print('Running ' + cmd)
                 subprocess.call(cmd, shell=True)        
  
