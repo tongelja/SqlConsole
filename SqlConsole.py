@@ -1,6 +1,6 @@
 #!/bin/python3
 
-import sys, getpass, re, traceback, os, traceback
+import sys, getpass, re, traceback, os, traceback, subprocess
 
 try:
     import pypyodbc, cx_Oracle
@@ -21,6 +21,17 @@ class SqlDb:
         self.connected_user = ''
 
         self.keyword_values = [ 'EXIT', 'SAVE' , 'DESC', 'DESCRIBE', '@', 'RUN' ]
+
+        self.path = ['/Users/jtongeli/work/scripts/instantclient_12_1_6/']
+
+        self.user = None
+        self.password = None
+        self.database    = None
+        self.server  = None
+        
+
+    def add_path(self, directory):
+        self.path = self.path + ':' + directory
 
 
     def cmd(self, sql_stmt=None):
@@ -171,6 +182,7 @@ class SqlDb:
 
 
 class Mssql(SqlDb):
+
     def open(self, server=None, user=None, password=None, port=1433):
         self.connection_info['type'] = 'MSSql'
         if server is None:
@@ -181,6 +193,10 @@ class Mssql(SqlDb):
 
         if password is None:
             password = getpass.getpass('Password ==>')
+
+        self.user = user
+        self.server = server
+        self.password = password
 
         print('Connecting to ' + user + '/*********' + '@' + server + ':' + str(port)  )
         conn_string = 'driver=/usr/local/lib/libtdsodbc.so;server=' + server + ';port=' + str(port) + ';uid=' + user + ';pwd=' + password
@@ -260,6 +276,7 @@ class Mssql(SqlDb):
 
 
 class Oracle(SqlDb):
+
     def open(self, server=None, database=None, user=None, password=None):
         self.connection_info['type'] = 'Oracle'
         if server is None:
@@ -278,6 +295,12 @@ class Oracle(SqlDb):
             mode =  cx_Oracle.SYSDBA
         else:
             mode = ''
+
+        self.user = user
+        self.database = database
+        self.server = server
+        self.password = password
+
         dsn = server + ':1521/' + database
         print('Connecting to ' +dsn)
         conn = cx_Oracle.connect(user, password, dsn, mode)
@@ -385,6 +408,13 @@ class Oracle(SqlDb):
                    " from dba_tab_columns where owner = '" + db_owner + "' and table_name = '" + db_object + "'"
 
         self.query(sql_stmt)
+
+    def sqlplus(self, directory=None):
+        for i in self.path:
+            filename = i + '/sqlplus'
+            if os.path.isfile(filename):
+                print('Running ' + cmd)
+                subprocess.call(cmd, shell=True)        
  
 
 
