@@ -1,6 +1,6 @@
 #!/bin/python3
 
-import sys, getpass, re, traceback, os
+import sys, getpass, re, traceback, os, traceback
 
 try:
     import pypyodbc, cx_Oracle
@@ -346,8 +346,8 @@ class db:
         sql_stmt = 'exec sp_columns ' + db_object
         self.__parse_mssql_sql_query__(sql_stmt)
 
-    def __parse_oracle_desc__(self, sql_stmt):
 
+    def __parse_oracle_desc__(self, sql_stmt):
 
         match = re.search('desc(ribe)? (.*)', sql_stmt, re.I)
         if match:
@@ -355,9 +355,11 @@ class db:
 
         if len(fullpath_object.split('.')) == 2:
             db_owner  = fullpath_object.split('.')[0].upper()
-            db_object = fullpath_object.split('.')[1].upper()
-        elif len(object.split('.')) == 1:
-            db_object = fullpath_object
+            db_object = fullpath_object.split('.')[1].upper().replace('V$','V_$')
+            
+        elif len(fullpath_object.split('.')) == 1:
+            db_object = fullpath_object.upper().replace('V$','V_$')
+            db_owner='SYS'
         else:
             db_owner=''
             db_object = ''
@@ -386,11 +388,10 @@ class db:
                     try:
                         self.__parse_sql__(sql_stmt)
                     except Exception as err:
-                        exc_type, exc_obj, exc_tb = sys.exc_info()
-                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                         print('\nERROR parsing SQL\n')
-                        print(str(err))
-                        #print(exc_type, fname, exc_tb.tb_lineno)
-                        #print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+                        traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+                        traceback.print_exception(exc_type, exc_value, exc_traceback, limit=4, file=sys.stdout)
+
 
 
