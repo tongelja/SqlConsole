@@ -422,7 +422,7 @@ class Oracle(SqlDb):
             filename = i + '/sqlplus'
             if os.path.isfile(filename):
                 if self.user.lower() == 'sys': 
-                    as_sysdba = 'as sysdba'
+                    as_sysdba = ' as sysdba'
                 else:
                     as_sysdba = ' '
                 cmd = filename + ' ' + self.user + '/' + self.password  + '@' + self.server + ':1521/' + self.database + as_sysdba
