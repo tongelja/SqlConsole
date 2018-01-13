@@ -278,7 +278,6 @@ class Mssql(SqlDb):
             filename = i + '/sqlcmd'
             if os.path.isfile(filename):
                 cmd = filename + ' -U ' + self.user + ' -P ' + self.password  + ' -S ' + self.server 
-                print('Running ' + cmd)
                 subprocess.call(cmd, shell=True)
 
 
@@ -428,7 +427,6 @@ class Oracle(SqlDb):
                     as_sysdba = ' '
                 cmd = filename + ' ' + self.user + '/' + self.password  + '@' + self.server + ':1521/' + self.database + as_sysdba
 
-                print('Running ' + cmd)
                 subprocess.call(cmd, shell=True)        
  
 
