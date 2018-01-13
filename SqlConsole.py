@@ -344,6 +344,7 @@ class Oracle(SqlDb):
 
         try:
             output = self.curs.execute(sql_stmt)
+            self.conn.commit()
 
             if hasattr(output, 'description'):
                 description = output.description
