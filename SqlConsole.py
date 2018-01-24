@@ -375,6 +375,7 @@ class Oracle(SqlDb):
         except cx_Oracle.DatabaseError as exc:
             error, = exc.args
             print(error.message)
+
         except Exception as err:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
