@@ -3,7 +3,7 @@
 import sys, getpass, re, traceback, os, traceback, subprocess
 
 try:
-    import pypyodbc, cx_Oracle
+    import pypyodbc, cx_Oracle, HereHost
 except:
     print('Unable to import python modules')
     sys.exit(2)
@@ -284,13 +284,20 @@ class Mssql(SqlDb):
 
 class Oracle(SqlDb):
 
-    def open(self, server=None, database=None, user=None, password=None):
+    def open(self, database=None, server=None, user=None, password=None):
         self.connection_info['type'] = 'Oracle'
+        h = HereHost.HereHost()
+        
+        if database is None:
+            database = input('Database ==> ')
+       
+        if database in h.dbs:
+            server = h.dbs[database]['host']
+            user   = h.dbs[database]['user']
+ 
         if server is None:
             server = input('Server ==> ')
 
-        if database is None:
-            database = input('Database ==> ')
 
         if user is None:
             user = input('User ==>')
@@ -320,6 +327,11 @@ class Oracle(SqlDb):
         self.connection_info['database'] = results[0]
  
         self.connected_user = user.upper()
+
+
+        if database not in h.dbs:
+            h.addDb(database , server, user)
+
 
 
     def execproc(self, procedure_name, input_variables):
@@ -360,10 +372,16 @@ class Oracle(SqlDb):
 
             self.write_table()
 
+        except cx_Oracle.DatabaseError as exc:
+            error, = exc.args
+            print(error.message)
         except Exception as err:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print('\nERROR parsing SQL: ' + sql_stmt +'\n')
+            print(exc_type)
+            print(exc_obj)
+            print(exc_tb)
+            print(fname)
 
 
     def script(self, sql_stmt):
