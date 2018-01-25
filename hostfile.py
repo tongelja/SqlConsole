@@ -1,6 +1,6 @@
 import os
 
-class HereHost:
+class Host:
     def __init__(self):
 
         self.host_file        = os.environ['HOME'] + '/work/oracle_host'

@@ -3,7 +3,7 @@
 import sys, getpass, re, traceback, os, traceback, subprocess
 
 try:
-    import pypyodbc, cx_Oracle, HereHost
+    import pypyodbc, cx_Oracle, hostfile 
 except:
     print('Unable to import python modules')
     sys.exit(2)
@@ -286,7 +286,7 @@ class Oracle(SqlDb):
 
     def open(self, database=None, server=None, user=None, password=None):
         self.connection_info['type'] = 'Oracle'
-        h = HereHost.HereHost()
+        h = hostfile.Host()
         
         if database is None:
             database = input('Database ==> ')
