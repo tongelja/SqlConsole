@@ -180,6 +180,15 @@ class SqlDb:
         return sql_stmt
 
 
+    def ssh(self, server=None):
+        if server is None: server = self.server
+        cmd =  'ssh ' + server
+        subprocess.call(cmd, shell=True)        
+ 
+
+
+
+
 
 class Mssql(SqlDb):
 
