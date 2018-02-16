@@ -188,8 +188,6 @@ class SqlDb:
 
 
 
-
-
 class Mssql(SqlDb):
 
     def open(self, server=None, user=None, password=None, port=1433):
@@ -282,13 +280,19 @@ class Mssql(SqlDb):
         sql_stmt = 'exec sp_columns ' + db_object
         self.query(sql_stmt)
 
-    def sqlcmd(self, directory=None):
+    def sqlcmd(self, cmd=None, directory=None):
         for i in self.path:
             filename = i + '/sqlcmd'
             if os.path.isfile(filename):
-                cmd = filename + ' -U ' + self.user + ' -P ' + self.password  + ' -S ' + self.server 
-                subprocess.call(cmd, shell=True)
-
+                sqlcmd_full_path=filename
+        
+        if cmd is None:
+            cmd = sqlcmd_full_path + ' -U ' + self.user + ' -P ' + self.password  + ' -S ' + self.server 
+            subprocess.call(cmd, shell=True)
+        else:
+            cmd = sqlcmd_full_path + ' -U ' + self.user + ' -P ' + self.password  + ' -S ' + self.server + " -Q '" + cmd + "'"
+            subprocess.call(cmd, shell=True)
+     
 
 
 class Oracle(SqlDb):
@@ -317,14 +321,14 @@ class Oracle(SqlDb):
         if user.upper() == 'SYS':
             mode =  cx_Oracle.SYSDBA
         else:
-            mode = ''
+            mode = 0
 
         self.user = user
         self.database = database
         self.server = server
         self.password = password
 
-        dsn = server + ':1521/' + database
+        dsn = server + '/' + database
         print('Connecting to ' +dsn)
         conn = cx_Oracle.connect(user, password, dsn, mode)
         self.conn = conn
@@ -456,7 +460,9 @@ class Oracle(SqlDb):
                 cmd = filename + ' ' + self.user + '/' + self.password  + '@' + self.server + ':1521/' + self.database + as_sysdba
 
                 subprocess.call(cmd, shell=True)        
- 
+
+    def close(self):
+        self.conn.close() 
 
 
 
