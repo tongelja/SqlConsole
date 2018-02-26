@@ -20,7 +20,7 @@ class SqlDb:
 
         self.connected_user = ''
 
-        self.keyword_values = [ 'EXIT', 'SAVE' , 'DESC', 'DESCRIBE', '@', 'RUN' ]
+        self.keyword_values = [ 'EXIT', 'SAVE' , 'DESC', 'DESCRIBE', '@', 'RUN', 'SHOW' ]
 
         self.path = ['/Users/jtongeli/work/scripts/instantclient_12_1_6/', '/usr/local/bin/']
 
@@ -73,6 +73,9 @@ class SqlDb:
 
         elif keyword_input == 'DESCRIBE' or keyword_input == 'DESC':
             self.desc(sql_stmt)
+
+        elif keyword_input == 'SHOW':
+            self.show(sql_stmt)
 
         elif keyword_input == 'RUN' or keyword_first_char == '@':
             self.script(sql_stmt)
@@ -361,7 +364,6 @@ class Oracle(SqlDb):
             print(str(err))
 
 
-
     def query(self, sql_stmt):
         self.curs = self.conn.cursor()
         self.results01 = {}
@@ -387,7 +389,7 @@ class Oracle(SqlDb):
 
         except cx_Oracle.DatabaseError as exc:
             error, = exc.args
-            print(error.message)
+            print(error.message + ': ' +  sql_stmt)
 
         except Exception as err:
             exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -427,27 +429,81 @@ class Oracle(SqlDb):
 
         self.query(sql_stmt)
 
-    def desc(self, sql_stmt):
+    def parseObjectName(self, fullpath_object):
+        my_object = {}
 
-        match = re.search('desc(ribe)? (.*)', sql_stmt, re.I)
-        if match:
-            fullpath_object = match.group(2)
+        db_owner   = None
+        db_object  = None
+        db_package = None
 
         if len(fullpath_object.split('.')) == 2:
             db_owner  = fullpath_object.split('.')[0].upper()
             db_object = fullpath_object.split('.')[1].upper().replace('V$','V_$')
-            
+
+        elif len(fullpath_object.split('.')) == 3:
+            db_owner   = fullpath_object.split('.')[0].upper()
+            db_package = fullpath_object.split('.')[2].upper()
+            db_object  = fullpath_object.split('.')[1].upper()
+
+
         elif len(fullpath_object.split('.')) == 1:
             db_object = fullpath_object.upper().replace('V$','V_$')
             db_owner='SYS'
+
         else:
             db_owner=''
             db_object = ''
 
-        sql_stmt = "select rpad(column_name, 40, ' ' ) ||  data_type || '(' ||  data_length || ')'  as " + db_object + \
-                   " from dba_tab_columns where owner = '" + db_owner + "' and table_name = '" + db_object + "'"
+        curs = self.conn.cursor()
+        sql_stmt = "select object_type from dba_objects where object_name = '" + db_object + "' and owner = '" + db_owner + "' and object_type in ('VIEW', 'TABLE', 'PACKAGE', 'PROCEDURE')"
+       
+        results = curs.execute(sql_stmt).fetchone()
+       
+        if results is None:
+            object_type = 'None'
+        else:
+            object_type =  results[0]
+ 
+        my_object = { 'type'        :  object_type,
+                      'owner'       :  db_owner,
+                      'object_name' :  db_object,
+                      'package'     :  db_package }
 
-        self.query(sql_stmt)
+        return my_object
+        
+
+    def show(self, sql_stmt):
+        match = re.search('show (parameter)? (.*)', sql_stmt, re.I)
+        if match:
+            parameter = match.group(2)
+            sql_stmt = "select name, value, description from v$parameter where regexp_like(name, '" + parameter + "', 'i') order by name"
+            self.query(sql_stmt)
+        else:
+            print('SHOW [PARAMETER <PARAMETER NAME>]')
+ 
+        
+ 
+    def desc(self, desc_stmt):
+
+        match = re.search('desc(ribe)? (.*)', desc_stmt, re.I)
+        if match:
+            fullpath_object = match.group(2)
+
+        my_object = self.parseObjectName(fullpath_object)
+
+        if my_object['type'] == 'TABLE' or my_object['type'] == 'VIEW':
+            sql_stmt = "select rpad(column_name, 40, ' ' ) ||  data_type || '(' ||  data_length || ')'  as " + my_object['object_name'] + " from dba_tab_columns where owner = '" + my_object['owner'] + "' and table_name = '" + my_object['object_name'] + "' order by column_id"
+        elif  my_object['type'] == 'PROCEDURE':
+            sql_stmt="select min(owner) || '.' ||  object_name ||  '(' ||  listagg(argument_name || ' ' ||  data_type, ', ') within group (order by owner, package_name, object_name, position) || ')' as " + my_object['object_name'] + "  from dba_arguments where owner = '" + my_object['owner'] + "' and object_name = '" + my_object['object_name'] + "' group by object_name"
+        elif  my_object['type'] == 'PACKAGE':
+            sql_stmt="select min(owner || '.' || package_name || '.' ) || object_name ||  '(' ||  listagg(argument_name || ' ' ||  data_type, ', ') within group (order by owner, package_name, object_name, position) || ')' as " + my_object['object_name'] + " from dba_arguments where owner = '" + my_object['owner'] + "' and package_name = '" + my_object['object_name'] + "' group by object_name"
+        else:
+            sql_stmt=None
+
+        if sql_stmt is None:
+            print('DES[CRIBE] <OBJECT_NAME> ')
+        else:
+            self.query(sql_stmt)
 
     def sqlplus(self, directory=None):
         for i in self.path:
