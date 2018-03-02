@@ -9,6 +9,12 @@ except:
     sys.exit(2)
 
 
+try:
+    from rac_snap import Instances_Snap
+except:
+    print('Unable to import Rac_Snap modules')
+    sys.exit(2)
+
 class SqlDb:
     def __init__(self):
         self.connection_info = {}
@@ -29,6 +35,8 @@ class SqlDb:
         self.database    = None
         self.server  = None
         
+    def __str__(self):
+         return self.user + '@' + self.database + '/' + self.server
 
     def add_path(self, directory):
         self.path = self.path + ':' + directory
@@ -333,6 +341,7 @@ class Oracle(SqlDb):
 
         dsn = server + '/' + database
         print('Connecting to ' +dsn)
+
         conn = cx_Oracle.connect(user, password, dsn, mode)
         self.conn = conn
         curs = conn.cursor()
@@ -482,6 +491,25 @@ class Oracle(SqlDb):
             print('SHOW [PARAMETER <PARAMETER NAME>]')
  
         
+
+    def racSnap(self, format=None):
+
+        if format is None:
+            format = 'STAT,EVENT,GSESS'
+
+        #conn = orautility.createOraConnection(connect)
+        conn = self.conn
+
+        my_snap = Instances_Snap(conn, format)
+
+        while 1 == 1:
+            try:
+                my_snap.create_snapshot()
+            except KeyboardInterrupt:
+                print('Exiting...')
+                sys.exit(0)
+
+
  
     def desc(self, desc_stmt):
 
