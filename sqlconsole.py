@@ -482,11 +482,19 @@ class Oracle(SqlDb):
         
 
     def show(self, sql_stmt):
-        match = re.search('show (parameter)? (.*)', sql_stmt, re.I)
-        if match:
+        match = re.search('show (parameter|global_parameter)? (.*)', sql_stmt, re.I)
+        show_type = match.group(1).upper()
+
+        if show_type == 'PARAMETER':
             parameter = match.group(2)
             sql_stmt = "select name, value, description from v$parameter where regexp_like(name, '" + parameter + "', 'i') order by name"
             self.query(sql_stmt)
+
+        elif show_type == 'GLOBAL_PARAMETER':
+            parameter = match.group(2)
+            sql_stmt = "select inst_id, name, value, description from gv$parameter where regexp_like(name, '" + parameter + "', 'i') order by name, inst_id"
+            self.query(sql_stmt)
+
         else:
             print('SHOW [PARAMETER <PARAMETER NAME>]')
  
