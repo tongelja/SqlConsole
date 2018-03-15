@@ -56,7 +56,7 @@ From here you can run SQL commands as normal.
 
 ## Authors
 
-* **John Tongelidis** - *Initial work* - [PurpleBooth](https://github.com/tongelja)
+* **John Tongelidis** - *Initial work* - [tongelja](https://github.com/tongelja)
 
 
 ## License
