@@ -1,3 +1,4 @@
+
 # SqlConsole
 
 SqlConsole is a python3 SQL REPL for Oracle and SQL Server (Postgres coming soon).  You can enter connect to different databases and save results to python for later analysis.  The layout resembles SQLPlus and allows you to run the same metadata commands from SqlConsole.
