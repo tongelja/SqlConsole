@@ -60,9 +60,6 @@ From here you can run SQL commands as normal.
 * **John Tongelidis** - *Initial work* - [tongelja](https://github.com/tongelja)
 
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
 
 
