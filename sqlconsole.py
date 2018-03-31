@@ -26,7 +26,7 @@ class SqlDb:
 
         self.connected_user = ''
 
-        self.keyword_values = [ 'EXIT', 'SAVE' , 'DESC', 'DESCRIBE', '@', 'RUN', 'SHOW' ]
+        self.keyword_values = [ 'EXIT', 'SAVE' , 'DESC', 'DESCRIBE', '@', 'RUN', 'SHOW', 'GET' ]
 
         self.path = ['/Users/jtongeli/work/scripts/instantclient_12_1_6/', '/usr/local/bin/']
 
@@ -84,6 +84,9 @@ class SqlDb:
 
         elif keyword_input == 'SHOW':
             self.show(sql_stmt)
+
+        elif keyword_input == 'GET':
+            self.get(sql_stmt)
 
         elif keyword_input == 'RUN' or keyword_first_char == '@':
             self.script(sql_stmt)
@@ -480,6 +483,11 @@ class Oracle(SqlDb):
 
         return my_object
         
+
+    def get(self, sql_stmt):
+        
+        match = re.search('show (parameter|global_parameter)? (.*)', sql_stmt, re.I)
+ 
 
     def show(self, sql_stmt):
         match = re.search('show (parameter|global_parameter)? (.*)', sql_stmt, re.I)
